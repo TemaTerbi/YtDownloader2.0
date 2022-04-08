@@ -17,8 +17,7 @@ from ytui import Ui_MainWindow
 @dataclasses.dataclass
 class ColorAnimation:
     element: QWidget
-    color_start: QColor
-    color_end: QColor
+    color: QColor
     duration: int = 1000
     animation_in: QPropertyAnimation = None
     effect: QGraphicsColorizeEffect = None
@@ -26,20 +25,20 @@ class ColorAnimation:
     def __post_init__(self):
         self.effect = QGraphicsColorizeEffect(self.element)
         self.element.setGraphicsEffect(self.effect)
+        self.effect.setColor(self.color)
         # create animation
-        self.effect.setStrength(1.)
-        self.animation_in = QPropertyAnimation(self.effect, b'color')
-        self.animation_in.setStartValue(self.color_start)
-        self.animation_in.setEndValue(self.color_end)
+        self.animation_in = QPropertyAnimation(self.effect, b'strength')
+        self.animation_in.setStartValue(0.)
+        self.animation_in.setEndValue(1.)
         self.animation_in.setDuration(self.duration)
 
         # same animation, reversed
-        self.animation_out = QPropertyAnimation(self.effect, b'color')
-        self.animation_out.setStartValue(self.color_end)
-        self.animation_out.setEndValue(self.color_start)
+        self.animation_out = QPropertyAnimation(self.effect, b'strength')
+        self.animation_out.setStartValue(1.)
+        self.animation_out.setEndValue(0.)
         self.animation_out.setDuration(self.duration)
-        # set out animation time to end time so button doesn't blink on first hover
-        self.animation_out.setCurrentTime(self.duration)
+        # for some reason have to start the animation for buttons to not blink
+        self.animation_out.start()
 
     def start(self):
         time = self.animation_out.currentTime()
@@ -90,42 +89,37 @@ class MainWindow(QtWidgets.QMainWindow):
             prop = 'background-color'
             color_re = re.compile(f'.*{prop}:\s*(#[a-f0-9]*)')
 
-            colors = [None, None]
+            color = None
             hover_next = False
             hover_block = False
             new_ss = ''
             for line in ss.split('\n'):
                 # start of hover block
                 if 'hover' in line:
-                    hover_next = hover_block = True
+                    hover_block = True
                 # found property
-                if m := color_re.match(line):
+                if hover_block and (m := color_re.match(line)):
                     value, = m.groups()
                     print(value)
-                    colors[int(hover_next)] = QColor(value)
-                    hover_next = False
+                    color = QColor(value)
                 # do not add hover style to new style
-                if not hover_block and ' color:' not in line:
+                if not hover_block:
                     new_ss += line + '\n'
                 # find end of hover style
                 if '}' in line:
                     hover_block = False
 
-            if None in colors:
-                raise ValueError(f"Не хватает одного из стилей! ({colors})")
-            return colors, new_ss
+            if color is None:
+                raise ValueError(f"Нет hover стиля! ({color})")
+            return color, new_ss
 
-        def multiply(color: QColor, mul):
-            r, g, b, a = color.getRgb()
-            return QColor(int(r*mul), int(g*mul), int(b*mul), a)
-
-        (c1, c2), new_styles = parse_stylesheet(styles)
-        c1 = multiply(c1, 1)
+        # get hover color and new styles without hover
+        color, new_styles = parse_stylesheet(styles)
         button.setStyleSheet(new_styles)
 
         print(new_styles)
-        print(c1.getRgb(), c2.getRgb())
-        ca = ColorAnimation(button, c1, c2, 300)
+        print(color)
+        ca = ColorAnimation(button, color, 300)
         self.button_colors[button] = ca
 
     def get_animation(self, obj: QObject):
