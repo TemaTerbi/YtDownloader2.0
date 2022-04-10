@@ -63,6 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.path = f'C:\\Users\\{self.name_user}\\Desktop'
         self.quality = ''
         self.button_colors = dict()
+        # self.setWindowIcon(QtGui.QIcon('./icon.png'))
         self.logical_ui()
 
     def logical_ui(self):
@@ -72,6 +73,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButton_4.clicked.connect(self.set_quality_to_720)
         self.ui.pushButton_5.clicked.connect(self.set_quality_to_1080)
         self.ui.pushButton_6.clicked.connect(self.download_btn)
+
         # find all buttons in the window
         buttons = self.findChildren(QPushButton)
         # attach an event filter to buttons
@@ -185,7 +187,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 app = QtWidgets.QApplication([])
+app.setWindowIcon(QtGui.QIcon('icon.png'))
 application = MainWindow()
+window = QtWidgets.QMainWindow()
+window.setWindowIcon(QtGui.QIcon('BLBwO.png'))
 application.show()
+
 
 sys.exit(app.exec())
